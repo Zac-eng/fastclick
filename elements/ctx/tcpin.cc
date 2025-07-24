@@ -421,10 +421,11 @@ void TCPIn::push_flow(int port, fcb_tcpin* fcb_in, PacketBatch* flow)
         if(fcb_in->common == NULL)
         {
             eagain:
+            click_chatter("fcbin common null");
             if(!assignTCPCommon(p, keep_fct))
             {
                 if (isRst(p)) {
-                    //click_chatter("RST received");
+                    click_chatter("RST received");
                     //First packet was a RST
                     outElement->output_push_batch(0, PacketBatch::make_from_packet(p)); //Elements never knew about this flow, we bypass
                     resetReorderer(fcb_in);
@@ -448,6 +449,7 @@ void TCPIn::push_flow(int port, fcb_tcpin* fcb_in, PacketBatch* flow)
 
             //If not syn, drop the flow
             if(!isSyn(p)) { //TODO : move to top block?
+                click_chatter("non-SYN received");
                 WritablePacket* packet = p->uniqueify();
                 closeConnection(packet, false);
                 if (unlikely(_verbose))
@@ -461,6 +463,7 @@ void TCPIn::push_flow(int port, fcb_tcpin* fcb_in, PacketBatch* flow)
             // - Remove the SACK-permitted option
             // - Detect the window scale
             // - Detect MSS
+            click_chatter("SYN received");
             WritablePacket* packet = p->uniqueify();
             manageOptions(packet);
             p = packet;
@@ -474,11 +477,13 @@ void TCPIn::push_flow(int port, fcb_tcpin* fcb_in, PacketBatch* flow)
         else // At least one packet of this side of the flow has been seen, or con has been reset
         {
             // The structure has been assigned so the three-way handshake should be over..
+            click_chatter("got fcbin common");
 
             // .. except if we have retransmission about the handshake, or reusing an old connection
             // Check that the packet is not a SYN packet
             if(isSyn(p))
             {
+                click_chatter("syn received");
                 if (unlikely(fcb_in->common->state == TCPState::CLOSED)) {
                     if (isAck(p)) {
                         if (unlikely(_verbose))
@@ -1214,7 +1219,7 @@ inline void TCPIn::releaseFcbSide(FlowControlBlock* fcb, fcb_tcpin* fcb_in) {
 inline void TCPIn::initializeFcbSyn(fcb_tcpin* fcb_in, const click_ip *iph , const click_tcp *tcph ) {
 
     IPFlowID flowID(iph->ip_src, tcph->th_sport, iph->ip_dst, tcph->th_dport);
-    click_chatter("init flowid: %d", flowID);
+    click_chatter("init flowid: %x", flowID.saddr());
     //A pending reset or time out connection could exist so we use replace and free any existing entry if found
     tableFcbTcpCommon.insert(flowID, fcb_in->common, [this](tcp_common* &existing) {
         existing->lock.acquire();
@@ -1263,7 +1268,7 @@ bool TCPIn::assignTCPCommon(Packet *packet, bool keep_fct)
         fcb_in->common = returnElement->getTCPCommon(flowID);
 
         if (fcb_in->common == 0) { //No matching connection
-            click_chatter("common flow id: %d", flowID);
+            click_chatter("common flow id: %x", flowID.saddr());
             return false;
         }
         //No need to fcb_in->common->use_count++, we keep the reference that belonged to the table
