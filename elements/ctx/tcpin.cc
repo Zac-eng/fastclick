@@ -1396,6 +1396,7 @@ tcp_common* TCPIn::getTCPCommon(IPFlowID flowID)
     }
     else
     {
+        click_chatter("found flow id: %d", flowID);
         return p;
     }
 }
