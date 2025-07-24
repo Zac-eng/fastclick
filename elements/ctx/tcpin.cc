@@ -1269,7 +1269,7 @@ bool TCPIn::assignTCPCommon(Packet *packet, bool keep_fct)
 
         if (fcb_in->common == 0) { //No matching connection
             click_chatter("common flow id: %x", flowID.saddr());
-            return false;
+            //return false;
         }
         //No need to fcb_in->common->use_count++, we keep the reference that belonged to the table
 
