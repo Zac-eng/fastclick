@@ -55,6 +55,7 @@ int TCPIn::configure(Vector<String> &conf, ErrorHandler *errh)
         return -1;
 
     Element* returnElement = this->router()->find(returnName, errh);
+    click_chatter("this: %x, return: %x", this, returnElement);
     Element* outElement;
     if (!outName) {
         ElementCastTracker visitor(router(),"TCPOut");
